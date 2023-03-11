@@ -1,0 +1,13 @@
+version: '3.9'
+services:
+  elastic-agent:
+    image: docker.elastic.co/beats/elastic-agent:${STACK_VERSION}
+    container_name: elastic-agent
+    environment:
+      FLEET_ENROLLMENT_TOKEN: ${ENROLLMENT_TOKEN}
+      FLEET_ENROLL: 1
+      FLEET_URL: "${FLEET_SERVER_URL}"
+      FLEET_INSECURE: "true"
+      KIBANA_FLEET_SETUP: "false"
+    ports:
+      - 8200:8200

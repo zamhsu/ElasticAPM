@@ -1,0 +1,58 @@
+receivers:    
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors: 
+  # 設定採樣率
+  probabilistic_sampler:
+    sampling_percentage: 50 # 50%
+  # 過濾healthcheck的請求
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 100
+    expected_new_traces_per_sec: 10
+    policies:
+      [
+        {
+          name: healthcheck-filter,
+          type: string_attribute,
+          string_attribute: 
+            {
+              key: http.url, 
+              values: ['^\/(?:metrics|healthcheck)$'], 
+              enabled_regex_matching: true, 
+              invert_match: true
+            }
+        }
+      ]
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 500
+  batch:
+
+exporters:
+  logging:
+    loglevel: info 
+  otlp/elastic: 
+    # Elastic APM server https endpoint without the "https://" prefix
+    endpoint: "${ELASTIC_APM_SERVER}"  
+    headers:
+      # Elastic APM Server secret token
+      Authorization: "Bearer ${ELASTIC_APM_SECRET_TOKEN}"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [probabilistic_sampler, tail_sampling]
+      exporters: [logging, otlp/elastic]
+    metrics:
+      receivers: [otlp]
+      exporters: [logging, otlp/elastic]
+    logs: 
+      receivers: [otlp]
+      exporters: [logging, otlp/elastic]
