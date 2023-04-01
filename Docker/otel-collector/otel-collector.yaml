@@ -10,9 +10,6 @@ processors:
     sampling_percentage: 50 # 50%
   # 過濾healthcheck的請求
   tail_sampling:
-    decision_wait: 10s
-    num_traces: 100
-    expected_new_traces_per_sec: 10
     policies:
       [
         {
@@ -21,15 +18,21 @@ processors:
           string_attribute: 
             {
               key: http.url, 
-              values: ['^\/(?:metrics|healthcheck)$'], 
+              values: ['^.*\/(?:metrics|healthcheck|health)$'], 
               enabled_regex_matching: true, 
               invert_match: true
             }
         }
       ]
   memory_limiter:
+    # 檢查的時間，建議1秒
     check_interval: 1s
+    # 可用記憶體空間
     limit_mib: 500
+    # 可用記憶體空間的最大峰值，不可超過limit的值，建議設為limit的20%
+    spike_limit_mib: 100
+    # limit_percentage: 10
+    # spike_limit_percentage: 2
   batch:
 
 exporters:
@@ -48,7 +51,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [probabilistic_sampler, tail_sampling]
+      processors: [probabilistic_sampler, tail_sampling, memory_limiter, batch]
       exporters: [logging, otlp/elastic]
     metrics:
       receivers: [otlp]
